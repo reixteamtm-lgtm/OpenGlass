@@ -9,6 +9,7 @@ cbuffer LiquidConstants : register(b1)
 	float4 glassRect;    // left, top, right, bottom in back-buffer pixels
 	float4 liquidShape;  // corner radius, bezel width, refraction (px), chromatic dispersion (0..1)
 	float4 liquidLight;  // specular strength, 1/width, 1/height, direction (+1 outward, -1 inward)
+	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur (Vista-style) colorization
 };
 
 float SdRoundRect(float2 p)
@@ -67,13 +68,27 @@ float4 main(PS_INPUT input) : SV_Target0
 		background = BlurAt(input, float2(0.0f, 0.0f));
 	}
 
-	// Same colorization as the stock Aero compose pass, so existing color/opacity settings still apply.
-	float coverage = saturate(background.a);
-	float luminance = dot(background.rgb, float3(0.2126f, 0.7152f, 0.0722f));
-	float3 result = blurBalance.xxx * background.rgb;
-	result = luminance * afterglow.xyz + result;
-	result = coverage * color.xyz + result;
-	result += (1.0f - coverage) * fallback.rgb;
+	// Same colorization as the stock compose passes (Blur_V for Aero, Blur_V_Vista for Blur),
+	// so existing color/opacity settings still apply.
+	float coverage;
+	float3 result;
+	float alpha;
+	if (liquidMode.x > 0.5f)
+	{
+		coverage = saturate(background.a);
+		float luminance = dot(background.rgb, float3(0.2126f, 0.7152f, 0.0722f));
+		result = blurBalance.xxx * background.rgb;
+		result = luminance * afterglow.xyz + result;
+		result = coverage * color.xyz + result;
+		result += (1.0f - coverage) * fallback.rgb;
+		alpha = coverage + (1.0f - coverage) * fallback.a;
+	}
+	else
+	{
+		coverage = 1.0f;
+		result = color.xyz + (1.0f - color.a) * background.rgb;
+		alpha = color.a + (1.0f - color.a) * background.a;
+	}
 
 	// Specular rim: light from the top-left, a brighter edge facing it and a softer one opposite.
 	float2 L = normalize(float2(-0.45f, -1.0f));
@@ -83,5 +98,5 @@ float4 main(PS_INPUT input) : SV_Target0
 	float highlight = facing * facing * pow(edge, 5.0f) + back * back * pow(edge, 7.0f) * 0.45f + rim * 0.35f;
 	result += highlight * specular * coverage;
 
-	return float4(saturate(result), coverage + (1.0f - coverage) * fallback.a);
+	return float4(saturate(result), alpha);
 }
