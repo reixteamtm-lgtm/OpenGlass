@@ -22,6 +22,14 @@ namespace OpenGlass
 		D2D1_VECTOR_4F fallback;
 	};
 
+	// Liquid Glass compose pass constants (register b1)
+	struct CConstantBufferLiquid
+	{
+		D2D1_VECTOR_4F glassRect;   // left, top, right, bottom
+		D2D1_VECTOR_4F shape;       // corner radius, bezel, refraction px, chroma
+		D2D1_VECTOR_4F light;       // specular, 1/width, 1/height, direction
+	};
+
 	// 80 bytes/vertex：pos(2) + baseUV(2) + 8 samples packed into 4 float4
 	struct BlurVertex
 	{
@@ -52,6 +60,9 @@ namespace OpenGlass
 
 		CConstantBufferVS						    m_cbVS{};
 		CConstantBufferPS						    m_cbPS{};
+		CConstantBufferLiquid					    m_cbLiquid{};
+		winrt::com_ptr<ID3D11PixelShader>           m_pixelShaderLiquid{ nullptr };
+		winrt::com_ptr<ID3D11Buffer>                m_constantBufferLiquid{ nullptr };
 		winrt::com_ptr<ID3D11VertexShader>          m_vertexShader{ nullptr };
 		winrt::com_ptr<ID3D11PixelShader>           m_pixelShaderBlurH{ nullptr };
 		winrt::com_ptr<ID3D11PixelShader>           m_pixelShaderBlurV{ nullptr };
@@ -156,5 +167,7 @@ namespace OpenGlass
 			Shared::GlassType type
 		);
 		static float GetBlurExpansion();
+		// Extra backdrop reach the Liquid Glass bezel samples beyond the blurred rectangles.
+		static float GetLiquidMargin();
 	};
 }

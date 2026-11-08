@@ -97,6 +97,7 @@
     <None Include="$(MSBuildThisFileDirectory)Blur.PS_BlurH.cso"><Link>Resource Files\Blur.PS_BlurH.cso</Link></None>
     <None Include="$(MSBuildThisFileDirectory)Blur.PS_BlurV.cso"><Link>Resource Files\Blur.PS_BlurV.cso</Link></None>
     <None Include="$(MSBuildThisFileDirectory)Blur.PS_BlurV_Vista.cso"><Link>Resource Files\Blur.PS_BlurV_Vista.cso</Link></None>
+    <None Include="$(MSBuildThisFileDirectory)Blur.PS_Liquid.cso"><Link>Resource Files\Blur.PS_Liquid.cso</Link></None>
     <None Include="$(MSBuildThisFileDirectory)Blur.VS.cso"><Link>Resource Files\Blur.VS.cso</Link></None>
     <None Include="$(MSBuildThisFileDirectory)Common.hlsli"><Link>Header Files\Common.hlsli</Link></None>
     <None Include="$(MSBuildThisFileDirectory)module.def"><Link>Source Files\module.def</Link></None>
@@ -109,6 +110,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)Blur.PS_BlurH.hlsl"><Link>Source Files\Blur.PS_BlurH.hlsl</Link><ShaderType>Pixel</ShaderType></FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)Blur.PS_BlurV.hlsl"><Link>Source Files\Blur.PS_BlurV.hlsl</Link><ShaderType>Pixel</ShaderType></FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)Blur.PS_BlurV_Vista.hlsl"><Link>Source Files\Blur.PS_BlurV_Vista.hlsl</Link><ShaderType>Pixel</ShaderType></FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)Blur.PS_Liquid.hlsl"><Link>Source Files\Blur.PS_Liquid.hlsl</Link><ShaderType>Pixel</ShaderType><ShaderModel>5.0</ShaderModel></FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)Blur.VS.hlsl"><Link>Source Files\Blur.VS.hlsl</Link><ShaderType>Vertex</ShaderType></FxCompile>
   </ItemGroup>
 </Project>

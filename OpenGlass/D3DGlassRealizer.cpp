@@ -121,6 +121,24 @@ HRESULT CD3DGlassRealizer::CreateDeviceResources(ID3D11Device* device)
 		)
 	);
 
+	// Liquid Glass compose shader (shader model 5.0). Optional: on feature level < 11 it is simply
+	// unavailable and the stock compose pass is used.
+	{
+		std::span<const UCHAR> psBytesLiquid{};
+		if (SUCCEEDED(Util::GetResDataView(psBytesLiquid, IDR_RCDATA_BLUR_PS_LIQUID)) &&
+			device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0)
+		{
+			LOG_IF_FAILED(
+				device->CreatePixelShader(
+					psBytesLiquid.data(),
+					psBytesLiquid.size_bytes(),
+					nullptr,
+					m_pixelShaderLiquid.put()
+				)
+			);
+		}
+	}
+
 	// Create small initial buffers (128) and grow dynamically on demand
 	D3D11_BUFFER_DESC bd{};
 	bd.Usage = D3D11_USAGE_DYNAMIC;
@@ -154,6 +172,13 @@ HRESULT CD3DGlassRealizer::CreateDeviceResources(ID3D11Device* device)
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = 0;
 	RETURN_IF_FAILED(device->CreateBuffer(&bd, nullptr, m_constantBufferPS.put()));
+
+	bd = {};
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(CConstantBufferLiquid);
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = 0;
+	RETURN_IF_FAILED(device->CreateBuffer(&bd, nullptr, m_constantBufferLiquid.put()));
 
 	D3D11_SAMPLER_DESC sampDesc{};
 	// Win7 DWM uses D3D10_FILTER_MIN_MAG_MIP_LINEAR for the common blur sampler (index 4).
@@ -560,7 +585,9 @@ HRESULT CD3DGlassRealizer::Render(
 
 	CalculateDwmHwSamples(BlurSettings::Direct3DStandardDeviation);
 	// DWM inflates bounds by filterRadius = ceil(sigma * 2.3) (sigma=3.0 => 7)
-	const float expansion = static_cast<float>(m_dwmHwSamples.radius);
+	// Liquid Glass bends samples up to GetLiquidMargin() pixels away, so the blurred backdrop must reach that far.
+	const bool liquid = Shared::g_liquidGlass && m_pixelShaderLiquid;
+	const float expansion = static_cast<float>(m_dwmHwSamples.radius) + (liquid ? GetLiquidMargin() : 0.f);
 	const UINT quarterWidth = std::max<UINT>(1u, backBufferDesc.Width >> 2);
 
 	std::vector<BlurVertex> verticesBlur{};
@@ -833,7 +860,22 @@ HRESULT CD3DGlassRealizer::Render(
 		context->UpdateSubresource(m_constantBufferVS.get(), 0, nullptr, &cbVS, 0, 0);
 	}
 
-	if (type == Shared::GlassType::Aero)
+	if (liquid)
+	{
+		CConstantBufferLiquid cbLiquid{};
+		cbLiquid.glassRect = { geometryBounds.left, geometryBounds.top, geometryBounds.right, geometryBounds.bottom };
+		cbLiquid.shape = { Shared::g_liquidCornerRadius, Shared::g_liquidBezel, Shared::g_liquidRefraction, Shared::g_liquidChroma };
+		cbLiquid.light = { Shared::g_liquidSpecular, 1.f / static_cast<float>(backBufferDesc.Width), 1.f / static_cast<float>(backBufferDesc.Height), Shared::g_liquidDirection };
+		if (memcmp(&m_cbLiquid, &cbLiquid, sizeof(cbLiquid)) != 0)
+		{
+			m_cbLiquid = cbLiquid;
+			context->UpdateSubresource(m_constantBufferLiquid.get(), 0, nullptr, &cbLiquid, 0, 0);
+		}
+		ID3D11Buffer* psLiquidCBs[] = { m_constantBufferPS.get(), m_constantBufferLiquid.get() };
+		context->PSSetConstantBuffers(0, 2, psLiquidCBs);
+		context->PSSetShader(m_pixelShaderLiquid.get(), nullptr, 0);
+	}
+	else if (type == Shared::GlassType::Aero)
 	{
 		context->PSSetShader(m_pixelShaderBlurV.get(), nullptr, 0);
 	}
@@ -863,5 +905,15 @@ HRESULT CD3DGlassRealizer::Render(
 float CD3DGlassRealizer::GetBlurExpansion()
 {
 	// Keep the existing conservative capture margin; the pass-local DWM kernel radius is ceil(σ × 2.3).
-	return std::ceil(BlurSettings::Direct3DStandardDeviation * 2.3f + 0.5f);
+	return std::ceil(BlurSettings::Direct3DStandardDeviation * 2.3f + 0.5f) + GetLiquidMargin();
+}
+
+float CD3DGlassRealizer::GetLiquidMargin()
+{
+	if (!Shared::g_liquidGlass)
+	{
+		return 0.f;
+	}
+	// Largest bezel offset: refraction * (1 + chroma) for the red channel, plus a texel of filtering slack.
+	return std::ceil(Shared::g_liquidRefraction * (1.f + Shared::g_liquidChroma)) + 1.f;
 }

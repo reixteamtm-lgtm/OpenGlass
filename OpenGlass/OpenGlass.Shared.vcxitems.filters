@@ -220,6 +220,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)Blur.PS_BlurV_Vista.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)Blur.PS_Liquid.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)Blur.VS.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
@@ -243,6 +246,9 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)Blur.PS_BlurV_Vista.cso">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Blur.PS_Liquid.cso">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)Blur.VS.cso">

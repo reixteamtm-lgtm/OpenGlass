@@ -33,6 +33,14 @@ namespace OpenGlass::Shared
 	inline float g_glassOpacity{};
 	inline float g_glassOpacityInactive{};
 	inline bool g_useD3DRendering{};
+	// Liquid Glass compose pass (Direct3D renderer only)
+	inline bool g_liquidGlass{};
+	inline float g_liquidRefraction{};
+	inline float g_liquidBezel{};
+	inline float g_liquidChroma{};
+	inline float g_liquidSpecular{};
+	inline float g_liquidDirection{ -1.f };
+	inline float g_liquidCornerRadius{};
 
 	inline D2D1_COLOR_F g_color{};
 	inline D2D1_COLOR_F g_colorInactive{};
