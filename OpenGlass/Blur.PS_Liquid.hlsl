@@ -9,7 +9,8 @@ cbuffer LiquidConstants : register(b1)
 	float4 glassRect;    // left, top, right, bottom in back-buffer pixels
 	float4 liquidShape;  // corner radius, bezel width, refraction (px), chromatic dispersion (0..1)
 	float4 liquidLight;  // specular strength, 1/width, 1/height, direction (+1 outward, -1 inward)
-	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur (Vista-style) colorization; y: blur mix (0 clear .. 1 blurred)
+	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur colorization; y: body blur mix; z: rim blur mix; w: frost radius px
+	float4 liquidExtra;  // x: body dim (0..1)
 };
 
 // Full-resolution copy of the backdrop, used for the clear (unblurred) part of the glass.
@@ -39,6 +40,14 @@ float4 BlurAt(PS_INPUT input, float2 duv)
 	return s;
 }
 
+// Wider frost: average the stock 8-tap blur at five points of a cross.
+float4 FrostAt(PS_INPUT input, float2 duv, float2 step)
+{
+	return (BlurAt(input, duv) * 2.0f +
+		BlurAt(input, duv + float2(step.x, 0.0f)) + BlurAt(input, duv - float2(step.x, 0.0f)) +
+		BlurAt(input, duv + float2(0.0f, step.y)) + BlurAt(input, duv - float2(0.0f, step.y))) / 6.0f;
+}
+
 float4 main(PS_INPUT input) : SV_Target0
 {
 	float2 p = input.pos.xy;
@@ -58,21 +67,13 @@ float4 main(PS_INPUT input) : SV_Target0
 	float bend = refraction * pow(edge, 2.2f);           // squircle-like bezel profile
 	float2 offsetPx = n * bend * direction;
 
-	float blurMix = saturate(liquidMode.y);
+	// iOS-style: the bezel stays clear (refraction + dispersion visible), the body is frosted.
+	float blurMix = saturate(lerp(liquidMode.y, liquidMode.z, saturate(edge * 1.5f)));
+	float2 frostStep = liquidMode.w * invSize;
 	float4 blurred = 0;
 	if (blurMix > 0.001f)
 	{
-		if (bend > 0.01f)
-		{
-			float4 g = BlurAt(input, offsetPx * invSize);
-			float4 r = BlurAt(input, offsetPx * (1.0f + chroma) * invSize);
-			float4 b = BlurAt(input, offsetPx * (1.0f - chroma) * invSize);
-			blurred = float4(r.r, g.g, b.b, g.a);
-		}
-		else
-		{
-			blurred = BlurAt(input, float2(0.0f, 0.0f));
-		}
+		blurred = liquidMode.w > 0.5f ? FrostAt(input, offsetPx * invSize, frostStep) : BlurAt(input, offsetPx * invSize);
 	}
 	float4 sharp = 0;
 	if (blurMix < 0.999f)
@@ -112,6 +113,9 @@ float4 main(PS_INPUT input) : SV_Target0
 		result = color.xyz + (1.0f - color.a) * background.rgb;
 		alpha = color.a + (1.0f - color.a) * background.a;
 	}
+
+	// Darken the frosted body a little so text on top stays legible; the rim keeps full brightness.
+	result *= 1.0f - liquidExtra.x * (1.0f - edge) * blurMix;
 
 	// Specular rim: light from the top-left, a brighter edge facing it and a softer one opposite.
 	float2 L = normalize(float2(-0.45f, -1.0f));
