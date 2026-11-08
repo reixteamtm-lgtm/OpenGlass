@@ -733,8 +733,11 @@ HRESULT CD3DGlassRealizer::Render(
 	// display target or an intermediate target), so this is the only usable path there.
 	//
 	// https://github.com/ALTaleX531/OpenGlass/issues/257#issuecomment-3856945555
+	//
+	// Liquid Glass also samples this copy at full resolution for its sharp (unblurred) backdrop,
+	// so the copy is always made when it is enabled.
 	ID3D11ShaderResourceView* pass1InputSRV = backBufferSRV;
-	if (!pass1InputSRV)
+	if (!pass1InputSRV || liquid)
 	{
 		RETURN_IF_FAILED(
 			m_intermediateBuffer.Ensure(
@@ -866,7 +869,7 @@ HRESULT CD3DGlassRealizer::Render(
 		cbLiquid.glassRect = { geometryBounds.left, geometryBounds.top, geometryBounds.right, geometryBounds.bottom };
 		cbLiquid.shape = { Shared::g_liquidCornerRadius, Shared::g_liquidBezel, Shared::g_liquidRefraction, Shared::g_liquidChroma };
 		cbLiquid.light = { Shared::g_liquidSpecular, 1.f / static_cast<float>(backBufferDesc.Width), 1.f / static_cast<float>(backBufferDesc.Height), Shared::g_liquidDirection };
-		cbLiquid.mode = { type == Shared::GlassType::Aero ? 1.f : 0.f, 0.f, 0.f, 0.f };
+		cbLiquid.mode = { type == Shared::GlassType::Aero ? 1.f : 0.f, Shared::g_liquidBlur, 0.f, 0.f };
 		if (memcmp(&m_cbLiquid, &cbLiquid, sizeof(cbLiquid)) != 0)
 		{
 			m_cbLiquid = cbLiquid;
@@ -875,6 +878,8 @@ HRESULT CD3DGlassRealizer::Render(
 		ID3D11Buffer* psLiquidCBs[] = { m_constantBufferPS.get(), m_constantBufferLiquid.get() };
 		context->PSSetConstantBuffers(0, 2, psLiquidCBs);
 		context->PSSetShader(m_pixelShaderLiquid.get(), nullptr, 0);
+		ID3D11ShaderResourceView* srvsSharp[] = { m_intermediateBuffer.m_srv.get() };
+		context->PSSetShaderResources(1, 1, srvsSharp);
 	}
 	else if (type == Shared::GlassType::Aero)
 	{
@@ -899,6 +904,12 @@ HRESULT CD3DGlassRealizer::Render(
 	);
 	context->RSSetScissorRects(1, &clipRect);
 	context->DrawIndexed(static_cast<UINT>(indicesCompose.size()), 0, 0);
+	if (liquid)
+	{
+		// The cached state must not retain the borrowed backdrop copy view.
+		ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+		context->PSSetShaderResources(1, 1, nullSRV);
+	}
 
 	return S_OK;
 }

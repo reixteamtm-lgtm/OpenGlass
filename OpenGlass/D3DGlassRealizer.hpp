@@ -28,7 +28,7 @@ namespace OpenGlass
 		D2D1_VECTOR_4F glassRect;   // left, top, right, bottom
 		D2D1_VECTOR_4F shape;       // corner radius, bezel, refraction px, chroma
 		D2D1_VECTOR_4F light;       // specular, 1/width, 1/height, direction
-		D2D1_VECTOR_4F mode;        // x: 1 = Aero colorization, 0 = Blur colorization
+		D2D1_VECTOR_4F mode;        // x: 1 = Aero colorization, 0 = Blur colorization; y: blur mix
 	};
 
 	// 80 bytes/vertex：pos(2) + baseUV(2) + 8 samples packed into 4 float4

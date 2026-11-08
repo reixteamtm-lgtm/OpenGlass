@@ -157,6 +157,7 @@ void GlassInfra::Update(GlassEngine::UpdateType type)
 		Shared::g_liquidSpecular = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassSpecular", 60), 0ul, 200ul)) / 100.f;
 		Shared::g_liquidDirection = GlassEngine::GetDwordFromRegistry(L"LiquidGlassOutward", 0) ? 1.f : -1.f;
 		Shared::g_liquidCornerRadius = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassCornerRadius", 8), 0ul, 64ul));
+		Shared::g_liquidBlur = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassBlur", 25), 0ul, 100ul)) / 100.f;
 	}
 }
 

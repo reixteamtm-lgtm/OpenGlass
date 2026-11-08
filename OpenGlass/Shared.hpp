@@ -41,6 +41,7 @@ namespace OpenGlass::Shared
 	inline float g_liquidSpecular{};
 	inline float g_liquidDirection{ -1.f };
 	inline float g_liquidCornerRadius{};
+	inline float g_liquidBlur{};   // 0 = crystal clear backdrop, 1 = fully blurred
 
 	inline D2D1_COLOR_F g_color{};
 	inline D2D1_COLOR_F g_colorInactive{};

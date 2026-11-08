@@ -9,8 +9,11 @@ cbuffer LiquidConstants : register(b1)
 	float4 glassRect;    // left, top, right, bottom in back-buffer pixels
 	float4 liquidShape;  // corner radius, bezel width, refraction (px), chromatic dispersion (0..1)
 	float4 liquidLight;  // specular strength, 1/width, 1/height, direction (+1 outward, -1 inward)
-	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur (Vista-style) colorization
+	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur (Vista-style) colorization; y: blur mix (0 clear .. 1 blurred)
 };
+
+// Full-resolution copy of the backdrop, used for the clear (unblurred) part of the glass.
+Texture2D<float4> sharpTexture : register(t1);
 
 float SdRoundRect(float2 p)
 {
@@ -55,18 +58,38 @@ float4 main(PS_INPUT input) : SV_Target0
 	float bend = refraction * pow(edge, 2.2f);           // squircle-like bezel profile
 	float2 offsetPx = n * bend * direction;
 
-	float4 background;
-	if (bend > 0.01f)
+	float blurMix = saturate(liquidMode.y);
+	float4 blurred = 0;
+	if (blurMix > 0.001f)
 	{
-		float4 g = BlurAt(input, offsetPx * invSize);
-		float4 r = BlurAt(input, offsetPx * (1.0f + chroma) * invSize);
-		float4 b = BlurAt(input, offsetPx * (1.0f - chroma) * invSize);
-		background = float4(r.r, g.g, b.b, g.a);
+		if (bend > 0.01f)
+		{
+			float4 g = BlurAt(input, offsetPx * invSize);
+			float4 r = BlurAt(input, offsetPx * (1.0f + chroma) * invSize);
+			float4 b = BlurAt(input, offsetPx * (1.0f - chroma) * invSize);
+			blurred = float4(r.r, g.g, b.b, g.a);
+		}
+		else
+		{
+			blurred = BlurAt(input, float2(0.0f, 0.0f));
+		}
 	}
-	else
+	float4 sharp = 0;
+	if (blurMix < 0.999f)
 	{
-		background = BlurAt(input, float2(0.0f, 0.0f));
+		float4 g = sharpTexture.Sample(sampler0, (p + offsetPx) * invSize);
+		if (bend > 0.01f)
+		{
+			float r = sharpTexture.Sample(sampler0, (p + offsetPx * (1.0f + chroma)) * invSize).r;
+			float b = sharpTexture.Sample(sampler0, (p + offsetPx * (1.0f - chroma)) * invSize).b;
+			sharp = float4(r, g.g, b, g.a);
+		}
+		else
+		{
+			sharp = g;
+		}
 	}
+	float4 background = lerp(sharp, blurred, blurMix);
 
 	// Same colorization as the stock compose passes (Blur_V for Aero, Blur_V_Vista for Blur),
 	// so existing color/opacity settings still apply.
