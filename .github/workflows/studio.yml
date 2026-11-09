@@ -1,0 +1,52 @@
+name: Studio
+
+on:
+  push:
+    branches:
+      - liquid-glass
+    paths:
+      - 'LiquidGlassStudio/**'
+      - '.github/workflows/studio.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: dotnet build LiquidGlassStudio/LiquidGlassStudio.csproj -c Release -o out -nologo
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidGlassStudio
+          path: |
+            out/LiquidGlassStudio.exe
+            out/LiquidGlassStudio.exe.config
+
+      - name: Publish to the bin-studio branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'studiobin'
+          git init -q $dir
+          Copy-Item out/LiquidGlassStudio.exe $dir
+          if (Test-Path out/LiquidGlassStudio.exe.config) { Copy-Item out/LiquidGlassStudio.exe.config $dir }
+          Set-Content -Path (Join-Path $dir 'BUILD.txt') -Value "${{ github.sha }}"
+          Push-Location $dir
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@users.noreply.github.com'
+          git checkout -q -b bin-studio
+          git add -A
+          git commit -q -m "Studio build ${{ github.sha }}"
+          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/${{ github.repository }}.git" bin-studio
+          Pop-Location

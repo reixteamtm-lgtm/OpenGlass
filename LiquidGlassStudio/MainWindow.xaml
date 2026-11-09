@@ -1,0 +1,161 @@
+<Window x:Class="LiquidGlassStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Liquid Glass Studio" Width="920" Height="680" MinWidth="760" MinHeight="520"
+        WindowStyle="None" ResizeMode="CanResize" Background="Transparent" UseLayoutRounding="True"
+        WindowStartupLocation="CenterScreen" Icon="app.ico"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13" Foreground="#F2F2F7">
+  <WindowChrome.WindowChrome>
+    <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="-1" CornerRadius="0" UseAeroCaptionButtons="False"/>
+  </WindowChrome.WindowChrome>
+  <Border x:Name="Root" Background="#8C1C1C1E">
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Sidebar -->
+      <Border Grid.Column="0" Background="#33000000" BorderBrush="#14FFFFFF" BorderThickness="0,0,1,0">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="18,18,0,0">
+            <Button x:Name="btnClose" Style="{StaticResource Light}" Background="#FF5F57" Tag="&#xE8BB;" ToolTip="Đóng (vẫn chạy dưới khay)"/>
+            <Button x:Name="btnMin" Style="{StaticResource Light}" Background="#FEBC2E" Tag="&#xE921;" ToolTip="Thu nhỏ"/>
+            <Button x:Name="btnMax" Style="{StaticResource Light}" Background="#28C840" Tag="&#xE922;" ToolTip="Phóng to"/>
+          </StackPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,22,0,12">
+            <Image Source="app.ico" Width="34" Height="34" Margin="0,0,10,0"/>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="Liquid Glass" FontSize="15" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display, Segoe UI"/>
+              <TextBlock Text="Studio" Foreground="#8E8E93" FontSize="11"/>
+            </StackPanel>
+          </StackPanel>
+          <TextBlock x:Name="txtVersion" DockPanel.Dock="Bottom" Foreground="#636366" FontSize="11" Margin="20,6,0,14"/>
+          <ListBox x:Name="lstNav" Background="Transparent" BorderThickness="0" SelectedIndex="0"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" FocusVisualStyle="{x:Null}">
+            <ListBoxItem Tag="pnlHome"><StackPanel Orientation="Horizontal"><Border Style="{StaticResource NavIcon}" Background="#0A84FF"><TextBlock Style="{StaticResource NavGlyph}" Text="&#xE80F;"/></Border><TextBlock Style="{StaticResource NavText}" Text="Tổng quan"/></StackPanel></ListBoxItem>
+            <ListBoxItem Tag="pnlWindow"><StackPanel Orientation="Horizontal"><Border Style="{StaticResource NavIcon}" Background="#64D2FF"><TextBlock Style="{StaticResource NavGlyph}" Text="&#xE7F4;"/></Border><TextBlock Style="{StaticResource NavText}" Text="Kính cửa sổ"/></StackPanel></ListBoxItem>
+            <ListBoxItem Tag="pnlTaskbar"><StackPanel Orientation="Horizontal"><Border Style="{StaticResource NavIcon}" Background="#5E5CE6"><TextBlock Style="{StaticResource NavGlyph}" Text="&#xE7C4;"/></Border><TextBlock Style="{StaticResource NavText}" Text="Taskbar &amp; Dock"/></StackPanel></ListBoxItem>
+            <ListBoxItem Tag="pnlSettings"><StackPanel Orientation="Horizontal"><Border Style="{StaticResource NavIcon}" Background="#8E8E93"><TextBlock Style="{StaticResource NavGlyph}" Text="&#xE713;"/></Border><TextBlock Style="{StaticResource NavText}" Text="Cài đặt"/></StackPanel></ListBoxItem>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <!-- Content -->
+      <Grid Grid.Column="1">
+        <!-- Tổng quan -->
+        <ScrollViewer x:Name="pnlHome" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="32,24,32,20" MaxWidth="760">
+            <TextBlock Style="{StaticResource H1}" Text="Liquid Glass"/>
+            <TextBlock Style="{StaticResource Sub}" Text="Kính kiểu iOS 26 cho Windows, vẽ ngay trong DWM bằng OpenGlass. Mọi thay đổi có tác dụng ngay, không cần khởi động lại."/>
+            <TextBlock Style="{StaticResource Section}" Text="Trạng thái"/>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <Grid Margin="0,10">
+                  <StackPanel>
+                    <TextBlock x:Name="txtOg" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource RowSub}" Text="Thành phần vẽ kính bên trong Windows."/>
+                  </StackPanel>
+                  <Button x:Name="btnRestartOg" Content="Khởi động lại" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0"/>
+                </Grid>
+                <Border Height="1" Background="{DynamicResource RowLine}"/>
+                <Grid Margin="0,10">
+                  <StackPanel>
+                    <TextBlock x:Name="txtTb" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource RowSub}" Text="Ẩn nền mặc định của taskbar. Chọn chế độ Clear cho cả Desktop và Maximised window."/>
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
+            <TextBlock Style="{StaticResource Section}" Text="Bật / tắt"/>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <CheckBox x:Name="chkLiquid">
+                  <StackPanel><TextBlock Text="Liquid Glass"/><TextBlock Style="{StaticResource RowSub}" Text="Tắt thì quay về kính thường của OpenGlass."/></StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="chkTaskbar">
+                  <StackPanel><TextBlock Text="Kính cho taskbar"/><TextBlock Style="{StaticResource RowSub}" Text="OpenGlass vẽ kính phía sau taskbar (Override accent)."/></StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="chkNoDark">
+                  <StackPanel><TextBlock Text="Không tối đi khi phóng to"/><TextBlock Style="{StaticResource RowSub}" Text="Giữ nguyên kính khi có cửa sổ phóng to toàn màn hình."/></StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="chkOutward">
+                  <StackPanel><TextBlock Text="Khúc xạ hướng ra ngoài"/><TextBlock Style="{StaticResource RowSub}" Text="Viền kính kéo hình ở phía ngoài vào thay vì đẩy ra."/></StackPanel>
+                </CheckBox>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Kính cửa sổ -->
+        <ScrollViewer x:Name="pnlWindow" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+          <StackPanel Margin="32,24,32,20" MaxWidth="760">
+            <TextBlock Style="{StaticResource H1}" Text="Kính cửa sổ"/>
+            <TextBlock Style="{StaticResource Sub}" Text="Thanh tiêu đề và mọi vùng kính của cửa sổ (Explorer, hộp thoại...)."/>
+            <TextBlock Style="{StaticResource Section}" Text="Mẫu"/>
+            <Border Style="{StaticResource Card}">
+              <WrapPanel x:Name="wpWindowPresets" Margin="0,10,0,2"/>
+            </Border>
+            <TextBlock Style="{StaticResource Section}" Text="Tinh chỉnh"/>
+            <Border Style="{StaticResource Card}">
+              <StackPanel x:Name="spWindow"/>
+            </Border>
+            <Button x:Name="btnWindowReset" Content="Về mặc định của OpenGlass" HorizontalAlignment="Left"/>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Taskbar & Dock -->
+        <ScrollViewer x:Name="pnlTaskbar" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+          <StackPanel Margin="32,24,32,20" MaxWidth="760">
+            <TextBlock Style="{StaticResource H1}" Text="Taskbar &amp; Dock"/>
+            <TextBlock Style="{StaticResource Sub}" Text="Kính riêng cho taskbar, và chế độ Dock kiểu macOS: kính chỉ ôm quanh các icon, phần còn lại trong suốt."/>
+            <TextBlock Style="{StaticResource Section}" Text="Dock kiểu macOS"/>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <CheckBox x:Name="chkDock">
+                  <StackPanel><TextBlock Text="Dock kiểu macOS"/><TextBlock Style="{StaticResource RowSub}" Text="Một viên kính bo tròn nổi quanh các icon. Cần Liquid Glass Studio chạy nền để theo dõi vị trí icon."/></StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="chkTrayPill">
+                  <StackPanel><TextBlock Text="Ô kính riêng cho khay hệ thống"/><TextBlock Style="{StaticResource RowSub}" Text="Đồng hồ, wifi, âm lượng nằm trong một viên kính nhỏ bên phải."/></StackPanel>
+                </CheckBox>
+                <StackPanel x:Name="spDock"/>
+                <TextBlock x:Name="txtDockStatus" Style="{StaticResource RowSub}" Margin="0,4,0,10"/>
+              </StackPanel>
+            </Border>
+            <TextBlock Style="{StaticResource Section}" Text="Mẫu kính taskbar"/>
+            <Border Style="{StaticResource Card}">
+              <WrapPanel x:Name="wpTaskbarPresets" Margin="0,10,0,2"/>
+            </Border>
+            <TextBlock Style="{StaticResource Section}" Text="Kính taskbar"/>
+            <Border Style="{StaticResource Card}">
+              <StackPanel x:Name="spTaskbar"/>
+            </Border>
+            <Button x:Name="btnTaskbarReset" Content="Dùng chung với kính cửa sổ" HorizontalAlignment="Left"/>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Cài đặt -->
+        <ScrollViewer x:Name="pnlSettings" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+          <StackPanel Margin="32,24,32,20" MaxWidth="760">
+            <TextBlock Style="{StaticResource H1}" Text="Cài đặt"/>
+            <TextBlock Style="{StaticResource Section}" Text="Chung"/>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <CheckBox x:Name="chkStartup">
+                  <StackPanel><TextBlock Text="Khởi động cùng Windows"/><TextBlock Style="{StaticResource RowSub}" Text="Chạy ẩn dưới khay để Dock luôn đúng vị trí icon."/></StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="chkKeepRunning">
+                  <StackPanel><TextBlock Text="Đóng cửa sổ thì chạy nền dưới khay"/><TextBlock Style="{StaticResource RowSub}" Text="Tắt mục này thì đóng cửa sổ là thoát hẳn (Dock trở về tấm kính dài sau 5 giây)."/></StackPanel>
+                </CheckBox>
+              </StackPanel>
+            </Border>
+            <TextBlock Style="{StaticResource Section}" Text="Giới thiệu"/>
+            <Border Style="{StaticResource Card}">
+              <TextBlock Style="{StaticResource Sub}" Margin="0,10" Text="Liquid Glass Studio chỉnh các giá trị LiquidGlass* / LiquidTaskbar* của bản OpenGlass Liquid Glass (HKCU\Software\Microsoft\Windows\DWM) và báo DWM tải lại ngay. Phím thoát khẩn cấp của OpenGlass: Ctrl + Win + Shift + Q."/>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
