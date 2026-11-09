@@ -870,7 +870,7 @@ HRESULT CD3DGlassRealizer::Render(
 		cbLiquid.shape = { Shared::g_liquidCornerRadius, Shared::g_liquidBezel, Shared::g_liquidRefraction, Shared::g_liquidChroma };
 		cbLiquid.light = { Shared::g_liquidSpecular, 1.f / static_cast<float>(backBufferDesc.Width), 1.f / static_cast<float>(backBufferDesc.Height), Shared::g_liquidDirection };
 		cbLiquid.mode = { type == Shared::GlassType::Aero ? 1.f : 0.f, Shared::g_liquidBlur, Shared::g_liquidRimBlur, Shared::g_liquidFrost };
-		cbLiquid.extra = { Shared::g_liquidDim, 0.f, 0.f, 0.f };
+		cbLiquid.extra = { Shared::g_liquidDim, Shared::g_liquidDebug, 0.f, 0.f };
 		if (memcmp(&m_cbLiquid, &cbLiquid, sizeof(cbLiquid)) != 0)
 		{
 			m_cbLiquid = cbLiquid;

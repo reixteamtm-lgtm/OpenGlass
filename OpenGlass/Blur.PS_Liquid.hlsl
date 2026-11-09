@@ -10,7 +10,7 @@ cbuffer LiquidConstants : register(b1)
 	float4 liquidShape;  // corner radius, bezel width, refraction (px), chromatic dispersion (0..1)
 	float4 liquidLight;  // specular strength, 1/width, 1/height, direction (+1 outward, -1 inward)
 	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur colorization; y: body blur mix; z: rim blur mix; w: frost radius px
-	float4 liquidExtra;  // x: body dim (0..1)
+	float4 liquidExtra;  // x: body dim (0..1), y: debug view (1 raw backdrop, 2 magenta)
 };
 
 // Full-resolution copy of the backdrop, used for the clear (unblurred) part of the glass.
@@ -91,6 +91,14 @@ float4 main(PS_INPUT input) : SV_Target0
 		}
 	}
 	float4 background = lerp(sharp, blurred, blurMix);
+	if (liquidExtra.y > 1.5f)
+	{
+		return float4(1.0f, 0.0f, 1.0f, 1.0f);
+	}
+	if (liquidExtra.y > 0.5f)
+	{
+		return float4(background.rgb, 1.0f);
+	}
 
 	// Same colorization as the stock compose passes (Blur_V for Aero, Blur_V_Vista for Blur),
 	// so existing color/opacity settings still apply.

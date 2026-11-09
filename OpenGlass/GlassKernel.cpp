@@ -15,6 +15,10 @@ std::bitset<2> GlassKernel::GetWindowStatus(const uDWM::CTopLevelWindow* window,
 	std::bitset<2> status;
 	status.set(0, WindowState::Resolve(hwnd, WindowState::ActivationOverrideProperty, nativeActive));
 	status.set(1, WindowState::Resolve(hwnd, WindowState::MaximizationOverrideProperty, window->TreatAsMaximized(data)));
+	if (Shared::g_liquidGlass && Shared::g_liquidIgnoreMaximized)
+	{
+		status.set(1, false);
+	}
 	return status;
 }
 

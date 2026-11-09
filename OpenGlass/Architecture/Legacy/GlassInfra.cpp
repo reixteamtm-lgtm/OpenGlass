@@ -368,6 +368,8 @@ void GlassInfra::Update(GlassEngine::UpdateType type)
 		Shared::g_liquidRimBlur = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassRimBlur", 0), 0ul, 100ul)) / 100.f;
 		Shared::g_liquidFrost = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassFrost", 10), 0ul, 32ul));
 		Shared::g_liquidDim = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassDim", 15), 0ul, 80ul)) / 100.f;
+		Shared::g_liquidIgnoreMaximized = GlassEngine::GetDwordFromRegistry(L"LiquidGlassIgnoreMaximized", 1) != 0;
+		Shared::g_liquidDebug = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassDebug", 0), 0ul, 2ul));
 	}
 }
 
