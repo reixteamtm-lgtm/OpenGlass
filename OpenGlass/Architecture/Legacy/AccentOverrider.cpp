@@ -29,6 +29,23 @@ namespace OpenGlass::AccentOverrider
 		va_end(args);
 		OutputDebugStringW(buffer);
 	}
+	bool IsTaskbarVisual(uDWM::CVisual* visual)
+	{
+		if (!Shared::g_overrideAccent)
+		{
+			return false;
+		}
+		const auto window = uDWM::TryGetWindowFromVisual(visual);
+		const auto data = window ? window->GetData() : nullptr;
+		const HWND hwnd = data ? data->GetHwnd() : nullptr;
+		if (!hwnd)
+		{
+			return false;
+		}
+		wchar_t className[64]{};
+		GetClassNameW(hwnd, className, ARRAYSIZE(className));
+		return !_wcsicmp(className, L"Shell_TrayWnd") || !_wcsicmp(className, L"Shell_SecondaryTrayWnd");
+	}
 	void DiagWindow(const wchar_t* where, HWND hwnd, UINT state, const wchar_t* decision)
 	{
 		wchar_t className[128]{};
@@ -183,7 +200,11 @@ HRESULT AccentOverrider::MyCAccent_UpdateAccentPolicy(
 	uDWM::CBaseGeometryProxy* geometry
 )
 {
-	const auto window = Shared::g_overrideAccent && (policy->AccentState == 3 || policy->AccentState == 4) ?
+	// Windows 11: the taskbar draws its own XAML backdrop and only asks DWM for ACCENT_ENABLE_TRANSPARENTGRADIENT (2),
+	// whatever TranslucentTB mode is chosen. Treat state 2 on the taskbar like blur so OpenGlass can put glass behind it
+	// (TranslucentTB set to "Clear" hides the XAML backdrop so the glass is visible).
+	const bool taskbarGradient = policy->AccentState == 2 && IsTaskbarVisual(This);
+	const auto window = Shared::g_overrideAccent && (policy->AccentState == 3 || policy->AccentState == 4 || taskbarGradient) ?
 		uDWM::TryGetWindowFromVisual(This) : nullptr;
 	const auto data = window ? window->GetData() : nullptr;
 	{
@@ -192,7 +213,7 @@ HRESULT AccentOverrider::MyCAccent_UpdateAccentPolicy(
 		const HWND hwnd = anyData ? anyData->GetHwnd() : nullptr;
 		const wchar_t* decision =
 			!Shared::g_overrideAccent ? L"skip: override off" :
-			!(policy->AccentState == 3 || policy->AccentState == 4) ? L"skip: state not 3/4" :
+			!(policy->AccentState == 3 || policy->AccentState == 4 || taskbarGradient) ? L"skip: state not 3/4" :
 			!window ? L"skip: no top-level window" :
 			!data ? L"skip: no window data" :
 			!UxMitigation::AllowsAccentOverride(data->GetHwnd(), Shared::g_uxMitigationFlags) ? L"skip: mitigation" :
