@@ -84,7 +84,7 @@ namespace LiquidGlassStudio
 
         AutomationElement _root;
         IntPtr _rootHwnd;
-        static readonly Condition ButtonCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
+        static readonly System.Windows.Automation.Condition ButtonCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
 
         void Publish()
         {
