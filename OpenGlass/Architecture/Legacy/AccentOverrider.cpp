@@ -8,10 +8,37 @@
 #include "GlassEffectBrush.hpp"
 #include "GlassReflectionBrush.hpp"
 #include "GlassFrameEnhancer.hpp"
+#include <atomic>
+#include <cstdarg>
 
 using namespace OpenGlass;
 namespace OpenGlass::AccentOverrider
 {
+	// Diagnostics: visible with Sysinternals DebugView (run as administrator, Capture Global Win32).
+	std::atomic<int> g_diagBudget{ 400 };
+	void DiagLog(const wchar_t* format, ...)
+	{
+		if (g_diagBudget.fetch_sub(1) <= 0)
+		{
+			return;
+		}
+		wchar_t buffer[512]{};
+		va_list args;
+		va_start(args, format);
+		_vsnwprintf_s(buffer, _TRUNCATE, format, args);
+		va_end(args);
+		OutputDebugStringW(buffer);
+	}
+	void DiagWindow(const wchar_t* where, HWND hwnd, UINT state, const wchar_t* decision)
+	{
+		wchar_t className[128]{};
+		if (hwnd)
+		{
+			GetClassNameW(hwnd, className, ARRAYSIZE(className));
+		}
+		DiagLog(L"[OG-Accent] %s hwnd=%p class=%s state=%u override=%d -> %s\n", where, hwnd, className, state, Shared::g_overrideAccent ? 1 : 0, decision);
+	}
+
 	HRESULT MyCAccent_CloneVisualTree_Pre19041(uDWM::CAccent* This, uDWM::CVisual** clone, bool option1, bool option2, bool option3);
 	HRESULT MyCAccent_CloneVisualTree(uDWM::CAccent* This, uDWM::CVisual** clone, UINT options);
 	HRESULT MyCAccent_UpdateAccentPolicy(
@@ -159,6 +186,19 @@ HRESULT AccentOverrider::MyCAccent_UpdateAccentPolicy(
 	const auto window = Shared::g_overrideAccent && (policy->AccentState == 3 || policy->AccentState == 4) ?
 		uDWM::TryGetWindowFromVisual(This) : nullptr;
 	const auto data = window ? window->GetData() : nullptr;
+	{
+		const auto anyWindow = window ? window : uDWM::TryGetWindowFromVisual(This);
+		const auto anyData = anyWindow ? anyWindow->GetData() : nullptr;
+		const HWND hwnd = anyData ? anyData->GetHwnd() : nullptr;
+		const wchar_t* decision =
+			!Shared::g_overrideAccent ? L"skip: override off" :
+			!(policy->AccentState == 3 || policy->AccentState == 4) ? L"skip: state not 3/4" :
+			!window ? L"skip: no top-level window" :
+			!data ? L"skip: no window data" :
+			!UxMitigation::AllowsAccentOverride(data->GetHwnd(), Shared::g_uxMitigationFlags) ? L"skip: mitigation" :
+			L"OVERRIDE";
+		DiagWindow(L"UpdateAccentPolicy", hwnd, policy->AccentState, decision);
+	}
 	if (!data || !UxMitigation::AllowsAccentOverride(data->GetHwnd(), Shared::g_uxMitigationFlags))
 	{
 		if (const auto it = g_accentClipRegions.find(This); it != g_accentClipRegions.end())
@@ -196,6 +236,7 @@ HRESULT AccentOverrider::MyCAccent__UpdateSolidFill(
 		opacity
 	);
 
+	DiagLog(L"[OG-Accent] _UpdateSolidFill override=%d state=%u instructions=%d\n", Shared::g_overrideAccent ? 1 : 0, This->GetAccentPolicy().AccentState, visual && !visual->GetInstructions().views().empty() ? 1 : 0);
 	if (!Shared::g_overrideAccent)
 	{
 		return result;
@@ -416,6 +457,7 @@ void AccentOverrider::Update(GlassEngine::UpdateType type)
 	if (type & GlassEngine::UpdateType::Backdrop)
 	{
 		Shared::g_overrideAccent = static_cast<bool>(GlassEngine::GetDwordFromRegistry(L"GlassOverrideAccent"));
+		DiagLog(L"[OG-Accent] Update: GlassOverrideAccent=%d uxFlags=0x%08X build=%u\n", Shared::g_overrideAccent ? 1 : 0, Shared::g_uxMitigationFlags, uDWM::g_versionInfo.build);
 		for (auto it = g_accentClipRegions.begin(); it != g_accentClipRegions.end();)
 		{
 			const auto window = uDWM::TryGetWindowFromVisual(it->first);
@@ -437,8 +479,10 @@ void AccentOverrider::Startup()
 {
 	if (Shared::g_disabledHooks.test(Shared::DisabledHooks_AccentOverrider))
 	{
+		DiagLog(L"[OG-Accent] Startup: AccentOverrider disabled by DisabledHooks\n");
 		return;
 	}
+	DiagLog(L"[OG-Accent] Startup: installing CAccent hooks (build %u)\n", uDWM::g_versionInfo.build);
 
 	HookHelper::ApplyInlineHooks(
 		std::initializer_list<HookHelper::DetourInfo>

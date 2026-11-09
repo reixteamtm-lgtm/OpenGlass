@@ -233,6 +233,11 @@ void AccentOverrider::Update(GlassEngine::UpdateType type)
 	if (type & GlassEngine::UpdateType::Backdrop)
 	{
 		Shared::g_overrideAccent = static_cast<bool>(GlassEngine::GetDwordFromRegistry(L"GlassOverrideAccent"));
+		{
+			wchar_t buffer[160]{};
+			swprintf_s(buffer, L"[OG-Accent] MILComp Update: GlassOverrideAccent=%d\n", Shared::g_overrideAccent ? 1 : 0);
+			OutputDebugStringW(buffer);
+		}
 		for (auto it = g_effectVisuals.begin(); it != g_effectVisuals.end();)
 		{
 			if (!GetAccentOverrideWindow(it->first))
