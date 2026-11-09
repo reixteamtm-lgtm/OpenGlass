@@ -47,6 +47,16 @@ namespace OpenGlass::Shared
 	inline float g_liquidDim{};      // body darkening for legibility, 0..1
 	inline bool g_liquidIgnoreMaximized{ true }; // keep the glass look when a window is maximized (no Windows 8 style darkening)
 	inline float g_liquidDebug{};    // 1: show the raw backdrop only, 2: paint the glass area magenta
+	// Taskbar uses its own set (LiquidTaskbar* values; each falls back to the window value when absent).
+	inline float g_tbRefraction{};
+	inline float g_tbBezel{};
+	inline float g_tbChroma{};
+	inline float g_tbSpecular{};
+	inline float g_tbCornerRadius{};
+	inline float g_tbBlur{};
+	inline float g_tbRimBlur{};
+	inline float g_tbFrost{};
+	inline float g_tbDim{};
 
 	inline D2D1_COLOR_F g_color{};
 	inline D2D1_COLOR_F g_colorInactive{};

@@ -11,16 +11,19 @@ cbuffer LiquidConstants : register(b1)
 	float4 liquidLight;  // specular strength, 1/width, 1/height, direction (+1 outward, -1 inward)
 	float4 liquidMode;   // x: 1 = Aero colorization, 0 = Blur colorization; y: body blur mix; z: rim blur mix; w: frost radius px
 	float4 liquidExtra;  // x: body dim (0..1), y: debug view (1 raw backdrop, 2 magenta)
+	float4 dockRect;     // macOS-style dock pill on the taskbar, back-buffer px (left, top, right, bottom)
+	float4 trayRect;     // second pill around the notification area
+	float4 dockOpt;      // x: dock on, y: tray pill on, z: pill corner radius, w: shadow strength
 };
 
 // Full-resolution copy of the backdrop, used for the clear (unblurred) part of the glass.
 Texture2D<float4> sharpTexture : register(t1);
 
-float SdRoundRect(float2 p)
+float SdRect(float2 p, float4 rect, float radius)
 {
-	float2 c = (glassRect.xy + glassRect.zw) * 0.5f;
-	float2 b = (glassRect.zw - glassRect.xy) * 0.5f;
-	float r = min(liquidShape.x, min(b.x, b.y));
+	float2 c = (rect.xy + rect.zw) * 0.5f;
+	float2 b = max((rect.zw - rect.xy) * 0.5f, 0.5f);
+	float r = min(radius, min(b.x, b.y));
 	float2 q = abs(p - c) - b + r;
 	return length(max(q, 0.0f)) + min(max(q.x, q.y), 0.0f) - r;
 }
@@ -58,9 +61,32 @@ float4 main(PS_INPUT input) : SV_Target0
 	float2 invSize = liquidLight.yz;
 	float direction = liquidLight.w;
 
-	float d = SdRoundRect(p);
+	// Shape: the whole glass area, or (dock mode) the nearest of the dock / tray pills.
+	float4 shapeRect = glassRect;
+	float radius = liquidShape.x;
+	float outsideDist = -1.0f;
+	float4 outside = 0;
+	if (dockOpt.x > 0.5f)
+	{
+		float dd = SdRect(p, dockRect, dockOpt.z);
+		float dt = dockOpt.y > 0.5f ? SdRect(p, trayRect, dockOpt.z) : 1e6f;
+		shapeRect = dt < dd ? trayRect : dockRect;
+		radius = dockOpt.z;
+		outsideDist = min(dd, dt);
+		// Outside the pills the taskbar is see-through, with a soft shadow hugging the pill.
+		float4 bg = sharpTexture.Sample(sampler0, p * invSize);
+		float lift = saturate((p.y - (shapeRect.y + shapeRect.w) * 0.5f) / max(shapeRect.w - shapeRect.y, 1.0f) + 0.5f);
+		float shadow = dockOpt.w * exp(-max(outsideDist, 0.0f) / 6.0f) * (0.45f + 0.55f * lift);
+		outside = float4(bg.rgb * (1.0f - saturate(shadow)), 1.0f);
+		if (outsideDist > 1.0f)
+		{
+			return outside;
+		}
+	}
+
+	float d = SdRect(p, shapeRect, radius);
 	float2 e = float2(1.0f, 0.0f);
-	float2 n = float2(SdRoundRect(p + e.xy) - SdRoundRect(p - e.xy), SdRoundRect(p + e.yx) - SdRoundRect(p - e.yx));
+	float2 n = float2(SdRect(p + e.xy, shapeRect, radius) - SdRect(p - e.xy, shapeRect, radius), SdRect(p + e.yx, shapeRect, radius) - SdRect(p - e.yx, shapeRect, radius));
 	n = n / max(length(n), 1e-4f);   // outward normal of the glass edge
 
 	float edge = 1.0f - saturate(-d / bezel);           // 1 at the rim, 0 on the flat interior
@@ -133,5 +159,11 @@ float4 main(PS_INPUT input) : SV_Target0
 	float highlight = facing * facing * pow(edge, 5.0f) + back * back * pow(edge, 7.0f) * 0.45f + rim * 0.35f;
 	result += highlight * specular * coverage;
 
-	return float4(saturate(result), alpha);
+	float4 glass = float4(saturate(result), alpha);
+	if (dockOpt.x > 0.5f)
+	{
+		// anti-aliased pill edge
+		return lerp(outside, glass, saturate(0.5f - outsideDist));
+	}
+	return glass;
 }

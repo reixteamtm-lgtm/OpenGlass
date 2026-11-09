@@ -13,6 +13,66 @@ namespace OpenGlass
 {
 	constexpr int c_maxTriangle = 2048;
 
+	// ---- Liquid Glass Studio: dock geometry published by the Studio app (Local\LiquidGlassDock) ----
+	struct LiquidDockShared
+	{
+		UINT32 magic;        // 'LGDK'
+		UINT32 version;      // 1
+		UINT64 tick;         // GetTickCount64() of the last write; stale after 5 s
+		INT32 dock;          // 1 = draw the taskbar as macOS-style dock pill(s)
+		INT32 tray;          // 1 = second pill around the notification area
+		float taskbar[4];    // taskbar window rect, screen px
+		float dockRect[4];   // relative to the taskbar's left/top
+		float trayRect[4];   // relative to the taskbar's left/top
+		float radius;
+		float shadow;
+		float reserved[2];
+	};
+	constexpr UINT32 c_liquidDockMagic = 0x4B44474Cu;
+
+	bool ReadLiquidDock(LiquidDockShared& out)
+	{
+		static HANDLE s_mapping{ nullptr };
+		static const volatile LiquidDockShared* s_view{ nullptr };
+		static ULONGLONG s_nextTry{ 0 };
+		const auto now = GetTickCount64();
+		if (!s_view)
+		{
+			if (now < s_nextTry)
+			{
+				return false;
+			}
+			s_nextTry = now + 2000;
+			s_mapping = OpenFileMappingW(FILE_MAP_READ, FALSE, L"Local\\LiquidGlassDock");
+			if (!s_mapping)
+			{
+				return false;
+			}
+			s_view = static_cast<const volatile LiquidDockShared*>(MapViewOfFile(s_mapping, FILE_MAP_READ, 0, 0, sizeof(LiquidDockShared)));
+			if (!s_view)
+			{
+				CloseHandle(s_mapping);
+				s_mapping = nullptr;
+				return false;
+			}
+		}
+		memcpy(&out, const_cast<const LiquidDockShared*>(s_view), sizeof(out));
+		return out.magic == c_liquidDockMagic && out.version == 1 && now >= out.tick && now - out.tick <= 5000;
+	}
+
+	bool IsTaskbarGlass(const D2D1_RECT_F& b, UINT width, UINT height, const LiquidDockShared* dock)
+	{
+		if (dock &&
+			std::abs(b.left - dock->taskbar[0]) <= 3.f && std::abs(b.top - dock->taskbar[1]) <= 3.f &&
+			std::abs(b.right - dock->taskbar[2]) <= 3.f && std::abs(b.bottom - dock->taskbar[3]) <= 3.f)
+		{
+			return true;
+		}
+		const float w = b.right - b.left;
+		const float h = b.bottom - b.top;
+		return w >= static_cast<float>(width) * 0.6f && h > 0.f && h <= 160.f && b.bottom >= static_cast<float>(height) - 2.f;
+	}
+
 	[[nodiscard]] D3D11_RECT ToScissorRect(
 		const D2D1_RECT_F& rc,
 		LONG width,
@@ -865,12 +925,32 @@ HRESULT CD3DGlassRealizer::Render(
 
 	if (liquid)
 	{
+		LiquidDockShared dockData{};
+		const bool haveDock = ReadLiquidDock(dockData);
+		const bool taskbar = IsTaskbarGlass(geometryBounds, backBufferDesc.Width, backBufferDesc.Height, haveDock ? &dockData : nullptr);
 		CConstantBufferLiquid cbLiquid{};
 		cbLiquid.glassRect = { geometryBounds.left, geometryBounds.top, geometryBounds.right, geometryBounds.bottom };
-		cbLiquid.shape = { Shared::g_liquidCornerRadius, Shared::g_liquidBezel, Shared::g_liquidRefraction, Shared::g_liquidChroma };
-		cbLiquid.light = { Shared::g_liquidSpecular, 1.f / static_cast<float>(backBufferDesc.Width), 1.f / static_cast<float>(backBufferDesc.Height), Shared::g_liquidDirection };
-		cbLiquid.mode = { type == Shared::GlassType::Aero ? 1.f : 0.f, Shared::g_liquidBlur, Shared::g_liquidRimBlur, Shared::g_liquidFrost };
-		cbLiquid.extra = { Shared::g_liquidDim, Shared::g_liquidDebug, 0.f, 0.f };
+		if (taskbar)
+		{
+			cbLiquid.shape = { Shared::g_tbCornerRadius, Shared::g_tbBezel, Shared::g_tbRefraction, Shared::g_tbChroma };
+			cbLiquid.light = { Shared::g_tbSpecular, 1.f / static_cast<float>(backBufferDesc.Width), 1.f / static_cast<float>(backBufferDesc.Height), Shared::g_liquidDirection };
+			cbLiquid.mode = { type == Shared::GlassType::Aero ? 1.f : 0.f, Shared::g_tbBlur, Shared::g_tbRimBlur, Shared::g_tbFrost };
+			cbLiquid.extra = { Shared::g_tbDim, Shared::g_liquidDebug, 1.f, 0.f };
+			if (haveDock && dockData.dock)
+			{
+				const float x = geometryBounds.left, y = geometryBounds.top;
+				cbLiquid.dockRect = { x + dockData.dockRect[0], y + dockData.dockRect[1], x + dockData.dockRect[2], y + dockData.dockRect[3] };
+				cbLiquid.trayRect = { x + dockData.trayRect[0], y + dockData.trayRect[1], x + dockData.trayRect[2], y + dockData.trayRect[3] };
+				cbLiquid.dockOpt = { 1.f, dockData.tray ? 1.f : 0.f, std::clamp(dockData.radius, 0.f, 64.f), std::clamp(dockData.shadow, 0.f, 1.f) };
+			}
+		}
+		else
+		{
+			cbLiquid.shape = { Shared::g_liquidCornerRadius, Shared::g_liquidBezel, Shared::g_liquidRefraction, Shared::g_liquidChroma };
+			cbLiquid.light = { Shared::g_liquidSpecular, 1.f / static_cast<float>(backBufferDesc.Width), 1.f / static_cast<float>(backBufferDesc.Height), Shared::g_liquidDirection };
+			cbLiquid.mode = { type == Shared::GlassType::Aero ? 1.f : 0.f, Shared::g_liquidBlur, Shared::g_liquidRimBlur, Shared::g_liquidFrost };
+			cbLiquid.extra = { Shared::g_liquidDim, Shared::g_liquidDebug, 0.f, 0.f };
+		}
 		if (memcmp(&m_cbLiquid, &cbLiquid, sizeof(cbLiquid)) != 0)
 		{
 			m_cbLiquid = cbLiquid;
@@ -928,5 +1008,8 @@ float CD3DGlassRealizer::GetLiquidMargin()
 		return 0.f;
 	}
 	// Largest bezel offset: refraction * (1 + chroma) for the red channel, plus a texel of filtering slack.
-	return std::ceil(Shared::g_liquidRefraction * (1.f + Shared::g_liquidChroma) + Shared::g_liquidFrost) + 1.f;
+	return std::ceil(std::max(
+		Shared::g_liquidRefraction * (1.f + Shared::g_liquidChroma) + Shared::g_liquidFrost,
+		Shared::g_tbRefraction * (1.f + Shared::g_tbChroma) + Shared::g_tbFrost
+	)) + 1.f;
 }

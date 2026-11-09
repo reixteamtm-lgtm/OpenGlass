@@ -163,6 +163,19 @@ void GlassInfra::Update(GlassEngine::UpdateType type)
 		Shared::g_liquidDim = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassDim", 15), 0ul, 80ul)) / 100.f;
 		Shared::g_liquidIgnoreMaximized = GlassEngine::GetDwordFromRegistry(L"LiquidGlassIgnoreMaximized", 1) != 0;
 		Shared::g_liquidDebug = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidGlassDebug", 0), 0ul, 2ul));
+		// Taskbar-specific Liquid Glass (Liquid Glass Studio). Missing values follow the window settings.
+		{
+			const auto pct = [](float v) { return static_cast<DWORD>(std::lround(v * 100.f)); };
+			Shared::g_tbRefraction = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarRefraction", static_cast<DWORD>(Shared::g_liquidRefraction)), 0ul, 80ul));
+			Shared::g_tbBezel = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarBezel", static_cast<DWORD>(Shared::g_liquidBezel)), 2ul, 80ul));
+			Shared::g_tbChroma = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarChroma", pct(Shared::g_liquidChroma)), 0ul, 60ul)) / 100.f;
+			Shared::g_tbSpecular = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarSpecular", pct(Shared::g_liquidSpecular)), 0ul, 200ul)) / 100.f;
+			Shared::g_tbCornerRadius = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarCornerRadius", static_cast<DWORD>(Shared::g_liquidCornerRadius)), 0ul, 64ul));
+			Shared::g_tbBlur = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarBlur", pct(Shared::g_liquidBlur)), 0ul, 100ul)) / 100.f;
+			Shared::g_tbRimBlur = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarRimBlur", pct(Shared::g_liquidRimBlur)), 0ul, 100ul)) / 100.f;
+			Shared::g_tbFrost = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarFrost", static_cast<DWORD>(Shared::g_liquidFrost)), 0ul, 32ul));
+			Shared::g_tbDim = static_cast<float>(std::clamp(GlassEngine::GetDwordFromRegistry(L"LiquidTaskbarDim", pct(Shared::g_liquidDim)), 0ul, 80ul)) / 100.f;
+		}
 	}
 }
 

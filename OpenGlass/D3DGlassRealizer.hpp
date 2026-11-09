@@ -29,7 +29,10 @@ namespace OpenGlass
 		D2D1_VECTOR_4F shape;       // corner radius, bezel, refraction px, chroma
 		D2D1_VECTOR_4F light;       // specular, 1/width, 1/height, direction
 		D2D1_VECTOR_4F mode;        // x: 1 = Aero colorization, 0 = Blur colorization; y: body blur; z: rim blur; w: frost px
-		D2D1_VECTOR_4F extra;       // x: body dim
+		D2D1_VECTOR_4F extra;       // x: body dim, y: debug view
+		D2D1_VECTOR_4F dockRect;    // macOS-style dock pill (back-buffer px)
+		D2D1_VECTOR_4F trayRect;    // tray pill
+		D2D1_VECTOR_4F dockOpt;     // x: dock on, y: tray on, z: radius, w: shadow
 	};
 
 	// 80 bytes/vertex：pos(2) + baseUV(2) + 8 samples packed into 4 float4
