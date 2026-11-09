@@ -16,7 +16,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -262,6 +262,25 @@ jobs:
             Build/${{ env.BUILD_PLATFORM }}/${{ env.BUILD_CONFIGURATION }}/OpenGlassSymbols.zip
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish installer to the bin-openglass branch
+        if: github.ref == 'refs/heads/liquid-glass' && steps.packaging_tools.outputs.iscc != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $src = "Build/${{ env.BUILD_PLATFORM }}/${{ env.BUILD_CONFIGURATION }}/OpenGlassSetup.exe"
+          $dir = Join-Path $env:RUNNER_TEMP 'binbranch'
+          git init -q $dir
+          Copy-Item $src (Join-Path $dir 'OpenGlassSetup.exe')
+          Set-Content -Path (Join-Path $dir 'BUILD.txt') -Value "${{ github.sha }}"
+          Push-Location $dir
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@users.noreply.github.com'
+          git checkout -q -b bin-openglass
+          git add -A
+          git commit -q -m "OpenGlass build ${{ github.sha }}"
+          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/${{ github.repository }}.git" bin-openglass
+          Pop-Location
 
       - name: Upload MSBuild binary log on failure
         if: failure() && hashFiles('MSBuild_Logs/build.binlog') != ''
