@@ -238,6 +238,12 @@ HRESULT AccentOverrider::MyCAccent_UpdateAccentPolicy(
 		// remove accent border atlas
 		accentPolicy.AccentFlags &= ~((1 << 5) | (1 << 6) | (1 << 7) | (1 << 8));
 	}
+	if (taskbarGradient)
+	{
+		// The Windows 11 taskbar asks for a top border line; with glass (and the dock) it shows as a stray
+		// full-width hairline, so drop the left/top/right/bottom border bits.
+		accentPolicy.AccentFlags &= ~((1 << 5) | (1 << 6) | (1 << 7) | (1 << 8));
+	}
 
 	return g_CAccent_UpdateAccentPolicy_Org(This, rect, &accentPolicy, geometry);
 }
