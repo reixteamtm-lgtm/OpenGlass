@@ -92,6 +92,15 @@ float4 main(PS_INPUT input) : SV_Target0
 	float edge = 1.0f - saturate(-d / bezel);           // 1 at the rim, 0 on the flat interior
 	float bend = refraction * pow(edge, 2.2f);           // squircle-like bezel profile
 	float2 offsetPx = n * bend * direction;
+	// Taskbar: never pull in pixels from outside the taskbar. On screen (with hardware overlays) that showed the
+	// bottom of the window above leaking down into the taskbar.
+	const bool keepInside = liquidExtra.z > 0.5f;
+	float2 lo = glassRect.xy + 1.0f;
+	float2 hi = glassRect.zw - 1.0f;
+	if (keepInside)
+	{
+		offsetPx = clamp(p + offsetPx, lo, hi) - p;
+	}
 
 	// iOS-style: the bezel stays clear (refraction + dispersion visible), the body is frosted.
 	float blurMix = saturate(lerp(liquidMode.y, liquidMode.z, saturate(edge * 1.5f)));
@@ -105,10 +114,17 @@ float4 main(PS_INPUT input) : SV_Target0
 	if (blurMix < 0.999f)
 	{
 		float4 g = sharpTexture.Sample(sampler0, (p + offsetPx) * invSize);
+		float2 pr = p + offsetPx * (1.0f + chroma);
+		float2 pb = p + offsetPx * (1.0f - chroma);
+		if (keepInside)
+		{
+			pr = clamp(pr, lo, hi);
+			pb = clamp(pb, lo, hi);
+		}
 		if (bend > 0.01f)
 		{
-			float r = sharpTexture.Sample(sampler0, (p + offsetPx * (1.0f + chroma)) * invSize).r;
-			float b = sharpTexture.Sample(sampler0, (p + offsetPx * (1.0f - chroma)) * invSize).b;
+			float r = sharpTexture.Sample(sampler0, pr * invSize).r;
+			float b = sharpTexture.Sample(sampler0, pb * invSize).b;
 			sharp = float4(r, g.g, b, g.a);
 		}
 		else
