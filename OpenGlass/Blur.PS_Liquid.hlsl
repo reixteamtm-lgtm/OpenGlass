@@ -175,6 +175,13 @@ float4 main(PS_INPUT input) : SV_Target0
 	float highlight = facing * facing * pow(edge, 5.0f) + back * back * pow(edge, 7.0f) * 0.45f + rim * 0.35f;
 	result += highlight * specular * coverage;
 
+	// Taskbar: always write a fully opaque pixel. A maximized window reaches a few pixels under the taskbar; when that
+	// window sits on a hardware overlay plane, any alpha below 1 here lets its bottom edge show through on screen
+	// (screenshots are composed in software, so they never showed it).
+	if (keepInside)
+	{
+		alpha = 1.0f;
+	}
 	float4 glass = float4(saturate(result), alpha);
 	if (dockOpt.x > 0.5f)
 	{
