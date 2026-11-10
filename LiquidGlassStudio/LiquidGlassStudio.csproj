@@ -10,7 +10,7 @@
     <RootNamespace>LiquidGlassStudio</RootNamespace>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>Liquid Glass Studio</Product>
     <Company>reixteamtm</Company>
     <PlatformTarget>AnyCPU</PlatformTarget>

@@ -36,6 +36,22 @@ namespace LiquidGlassStudio
         [DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
+        public const uint SPI_GETWORKAREA = 0x0030;
+        public const uint SPI_SETWORKAREA = 0x002F;
+        public const uint SPIF_SENDCHANGE = 0x0002;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SystemParametersInfo(uint action, uint param, ref RECT rect, uint winIni);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+
         [DllImport("psapi.dll")]
         public static extern bool EmptyWorkingSet(IntPtr process);
 

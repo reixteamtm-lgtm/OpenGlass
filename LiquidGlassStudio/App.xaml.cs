@@ -40,6 +40,7 @@ namespace LiquidGlassStudio
                 Shadow = GlassSettings.GetStudio("DockShadow", 35),
                 PadX = GlassSettings.GetStudio("DockPadX", 8),
                 PadY = GlassSettings.GetStudio("DockPadY", 3),
+                FillUnderDock = GlassSettings.GetStudio("FillUnderDock", 0) != 0,
             };
             Feeder.Start();
 

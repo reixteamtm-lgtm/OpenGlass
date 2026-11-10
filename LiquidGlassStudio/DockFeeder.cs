@@ -42,6 +42,8 @@ namespace LiquidGlassStudio
         public volatile int PadX = 8;
         public volatile int PadY = 3;
         public volatile string Status = "";
+        public volatile bool FillUnderDock;   // maximized windows extend under the dock (work area = whole monitor)
+        bool _workAreaChanged;
 
         public bool Start()
         {
@@ -78,13 +80,57 @@ namespace LiquidGlassStudio
                 catch (Exception ex) { Status = "Lỗi: " + ex.Message; }
                 _wake.WaitOne(1500);
             }
-            // tell OpenGlass immediately that the dock is gone
+            // tell OpenGlass immediately that the dock is gone, and give the taskbar its space back
             try { Write(new SharedBlock { Magic = Magic, Version = 1, Tick = Native.GetTickCount64() }); } catch { }
+            try
+            {
+                if (_workAreaChanged)
+                {
+                    var h = Native.FindWindow("Shell_TrayWnd", null);
+                    var mi = new Native.MONITORINFO { cbSize = Marshal.SizeOf(typeof(Native.MONITORINFO)) };
+                    if (h != IntPtr.Zero && Native.GetWindowRect(h, out var tb) && Native.GetMonitorInfo(Native.MonitorFromWindow(h, 2), ref mi))
+                        RestoreWorkArea(mi.rcMonitor, tb);
+                }
+            }
+            catch { }
         }
 
         AutomationElement _root;
         IntPtr _rootHwnd;
         static readonly System.Windows.Automation.Condition ButtonCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
+
+        // macOS-like: with the dock on, maximized windows reach the bottom of the screen and the dock floats over them.
+        // Explorer recalculates the work area now and then, so this is re-checked on every pass.
+        void UpdateWorkArea(IntPtr taskbar, Native.RECT tb)
+        {
+            var mi = new Native.MONITORINFO { cbSize = Marshal.SizeOf(typeof(Native.MONITORINFO)) };
+            if (!Native.GetMonitorInfo(Native.MonitorFromWindow(taskbar, 2), ref mi)) return;
+            var cur = new Native.RECT();
+            Native.SystemParametersInfo(Native.SPI_GETWORKAREA, 0, ref cur, 0);
+            var mon = mi.rcMonitor;
+            if (FillUnderDock && DockEnabled)
+            {
+                if (cur.Left != mon.Left || cur.Top != mon.Top || cur.Right != mon.Right || cur.Bottom != mon.Bottom)
+                {
+                    Native.SystemParametersInfo(Native.SPI_SETWORKAREA, 0, ref mon, Native.SPIF_SENDCHANGE);
+                    _workAreaChanged = true;
+                }
+            }
+            else if (_workAreaChanged)
+            {
+                RestoreWorkArea(mon, tb);
+            }
+        }
+
+        void RestoreWorkArea(Native.RECT mon, Native.RECT tb)
+        {
+            var work = mon;
+            int tw = tb.Right - tb.Left, th = tb.Bottom - tb.Top;
+            if (tw >= th) { if (tb.Top > mon.Top) work.Bottom = tb.Top; else work.Top = tb.Bottom; }
+            else { if (tb.Left > mon.Left) work.Right = tb.Left; else work.Left = tb.Right; }
+            Native.SystemParametersInfo(Native.SPI_SETWORKAREA, 0, ref work, Native.SPIF_SENDCHANGE);
+            _workAreaChanged = false;
+        }
 
         void Publish()
         {
@@ -96,6 +142,7 @@ namespace LiquidGlassStudio
                 Write(block);
                 return;
             }
+            try { UpdateWorkArea(hwnd, tb); } catch { }
             block.TbL = tb.Left; block.TbT = tb.Top; block.TbR = tb.Right; block.TbB = tb.Bottom;
 
             if (!DockEnabled)

@@ -118,6 +118,9 @@
                 <CheckBox x:Name="chkTrayPill">
                   <StackPanel><TextBlock Text="Ô kính riêng cho khay hệ thống"/><TextBlock Style="{StaticResource RowSub}" Text="Đồng hồ, wifi, âm lượng nằm trong một viên kính nhỏ bên phải."/></StackPanel>
                 </CheckBox>
+                <CheckBox x:Name="chkFillUnder">
+                  <StackPanel><TextBlock Text="Cửa sổ phóng to tràn xuống dưới Dock"/><TextBlock Style="{StaticResource RowSub}" Text="Như macOS: app phóng to kéo hết tới đáy màn hình, Dock nổi lên trên, không còn dải hình nền hở hai bên Dock."/></StackPanel>
+                </CheckBox>
                 <StackPanel x:Name="spDock"/>
                 <TextBlock x:Name="txtDockStatus" Style="{StaticResource RowSub}" Margin="0,4,0,10"/>
               </StackPanel>

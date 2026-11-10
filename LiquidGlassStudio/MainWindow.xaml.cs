@@ -166,6 +166,11 @@ namespace LiquidGlassStudio
                 if (f != null) { f.TrayEnabled = on; f.Poke(); }
                 GlassSettings.NotifyLater();
             });
+            BindToggle(chkFillUnder, () => GlassSettings.GetStudio("FillUnderDock", 0) != 0, on =>
+            {
+                GlassSettings.SetStudio("FillUnderDock", on ? 1 : 0);
+                if (f != null) { f.FillUnderDock = on; f.Poke(); }
+            });
             AddRows(spDock, new[]
             {
                 SliderRow("Bo góc Dock", null, 0, 40, " px", () => GlassSettings.GetStudio("DockRadius", 18), v => { GlassSettings.SetStudio("DockRadius", v); if (f != null) { f.Radius = v; f.Poke(); } GlassSettings.NotifyLater(); }),
